@@ -1,6 +1,7 @@
+import sys
 import pygame
 import numpy as np
-import sys
+
 
 WIDTH = 800  # Width of the screen in pixels
 HEIGHT = 600  # Height of the screen in pixels
@@ -14,21 +15,6 @@ TRANSPARENT_COLOR = (0, 0, 0)
 
 # Cell size in pixels
 CELL_SIZE = 8
-
-# Initialize pygame
-pygame.init()
-
-# Set window size and title
-size = (800, 800)
-screen = pygame.display.set_mode(size)
-pygame.display.set_caption("Game of Life")
-
-# Create a blank board
-board = np.zeros((80, 80), dtype=bool)
-
-# Set up font for button text
-font = pygame.font.Font(None, 30)
-
 
 """
 Apply the rules of the Game of Life to the board
@@ -49,9 +35,6 @@ def game_of_life(board):
                     new_board[i, j] = True
     return new_board
 
-"""
-Draw the board to the screen
-"""
 def draw_board(screen, board, previous_board):
     for x in range(board.shape[0]):
         for y in range(board.shape[1]):
@@ -65,19 +48,18 @@ def draw_board(screen, board, previous_board):
                 pygame.display.update(rect)
     previous_board[:] = board
 
-"""
-Draw the buttons to the screen
-"""
-def draw_buttons(running, draw) :
+def draw_buttons(screen, running, draw) :
+    # Set up font for button text
+    font = pygame.font.Font(None, 30)
 
     # Create the draw button -- this is only visible when the game is not running
     draw_button = pygame.Rect((WIDTH - BUTTON_WIDTH)//2, HEIGHT - 3*BUTTON_HEIGHT-20, BUTTON_WIDTH, BUTTON_HEIGHT)
 
     # Create the reset button -- this is only visible when the game is not running
     reset_button = pygame.Rect((WIDTH - BUTTON_WIDTH)//2, HEIGHT - 2*BUTTON_HEIGHT-10, BUTTON_WIDTH, BUTTON_HEIGHT)
- 
+
     blank_text = font.render("********", True, DEAD_COLOR, (0,0,0,0))
-    
+
     if running:
         game_button_name = "Pause"
         draw_text = blank_text
@@ -110,20 +92,26 @@ def draw_buttons(running, draw) :
 
     return start_game_button, reset_button, draw_button
 
-"""
-Main function
-"""
 def main():
-    global board
+    # Initialize pygame
+    pygame.init()
+
+    # Create a blank board
+    game_board = np.zeros((80, 80), dtype=bool)
     clock = pygame.time.Clock()
     FPS = 60
     mouse_down = False
     draw = True
     running = False
 
+    # Set window size and title
+    game_screen_size = (800, 800)
+    game_screen = pygame.display.set_mode(game_screen_size)
+    pygame.display.set_caption("Game of Life")
+
     while True:
-        previous_board = np.copy(board)
-        start_game_button, reset_button, draw_button = draw_buttons(running, draw)
+        previous_board = np.copy(game_board)
+        start_game_button, reset_button, draw_button = draw_buttons(game_screen, running, draw)
 
         # Check for mouse events
         for event in pygame.event.get():
@@ -140,28 +128,26 @@ def main():
                         running = not running
                     elif reset_button.collidepoint(event.pos):
                         # reset the board to blank
-                        board = np.zeros((80, 80), dtype=bool)
+                        game_board = np.zeros((80, 80), dtype=bool)
                     elif draw_button.collidepoint(event.pos):
                         draw = not draw
                     else:
                         mouse_down = True
             elif event.type == pygame.MOUSEBUTTONUP:
                 mouse_down = False
-            
         if running:
             # Update the board
-            board = game_of_life(board)
-
+            game_board = game_of_life(game_board)
         if mouse_down:
             # draw/erase a cell
             x, y = pygame.mouse.get_pos()
             x, y = x // CELL_SIZE, y // CELL_SIZE
-            if x < board.shape[0] and y < board.shape[1]:
-                board[x, y] = draw
+            if x < game_board.shape[0] and y < game_board.shape[1]:
+                game_board[x, y] = draw
 
         # Draw the board
-        draw_board(screen, board, previous_board)
-        
+        draw_board(game_screen, game_board, previous_board)
+
         pygame.display.flip()
         clock.tick(FPS)
 
