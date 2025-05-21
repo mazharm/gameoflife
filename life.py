@@ -65,13 +65,16 @@ def draw_buttons(screen, running, draw) :
     """
     # Set up font for button text
     font = pygame.font.Font(None, 30)
-
+    
+    # Position buttons in the bottom area of the screen
+    buttons_y_start = BOARD_Y_OFFSET + 80 * CELL_SIZE + 40  # Start button positioning below the board with some padding
+    
     # Create the draw button -- this is only visible when the game is not running
-    draw_button = pygame.Rect((WIDTH - BUTTON_WIDTH)//2, HEIGHT - 3*BUTTON_HEIGHT-20,\
+    draw_button = pygame.Rect((WIDTH - BUTTON_WIDTH)//2, buttons_y_start,
                                BUTTON_WIDTH, BUTTON_HEIGHT)
 
     # Create the reset button -- this is only visible when the game is not running
-    reset_button = pygame.Rect((WIDTH - BUTTON_WIDTH)//2, HEIGHT - 2*BUTTON_HEIGHT-10,\
+    reset_button = pygame.Rect((WIDTH - BUTTON_WIDTH)//2, buttons_y_start + BUTTON_HEIGHT + 10,
                                 BUTTON_WIDTH, BUTTON_HEIGHT)
 
     blank_text = font.render("********", True, DEAD_COLOR, (0,0,0,0))
@@ -101,7 +104,7 @@ def draw_buttons(screen, running, draw) :
     pygame.draw.rect(screen, color, draw_button, 2)
 
     # Create the start/pause game button -- this is button is always visible
-    start_game_button = pygame.Rect((WIDTH - BUTTON_WIDTH)//2, HEIGHT - BUTTON_HEIGHT, \
+    start_game_button = pygame.Rect((WIDTH - BUTTON_WIDTH)//2, buttons_y_start + 2 * (BUTTON_HEIGHT + 10), \
                             BUTTON_WIDTH, BUTTON_HEIGHT)
 
     start_game_text = font.render(game_button_name, True, (255,255,255), (0,0,0,0))
