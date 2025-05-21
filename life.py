@@ -181,7 +181,7 @@ def draw_buttons(screen, running, draw, current_tribe, tribal_mode=True) :
                 start_game_text.get_height()) // 2))
     pygame.draw.rect(screen, (255, 0, 0), start_game_button, 2)
 
-    return start_game_button, reset_button, draw_button, tribe_button, mode_button
+    return start_game_button, reset_button, draw_button, tribe_button, mode_button, mode_button
 
 def main():
     """ Main function"""
