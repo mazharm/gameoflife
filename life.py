@@ -38,40 +38,56 @@ MAX_TRIBES = len(TRIBE_COLORS) - 1  # Subtract 1 because index 0 is for dead cel
 CELL_SIZE = 10
 
 
-def game_of_life(board):
+def game_of_life(board, tribal_mode=True):
     """
     Apply the rules of the Game of Life to the board with tribal dynamics
     """
     # Copy the board to a new array to avoid modifying the original
     new_board = np.copy(board)
     
-    for i in range(1, board.shape[0]-1):
-        for j in range(1, board.shape[1]-1):
-            # Get the neighborhood window
-            neighbors_window = board[i-1:i+2, j-1:j+2].copy()
-            # Count living neighbors (cells with non-zero values)
-            living_neighbors = np.sum(neighbors_window > 0) - (board[i, j] > 0)
-            
-            # Get counts of each tribe in the neighborhood
-            unique_tribes = {}
-            for x in range(3):
-                for y in range(3):
-                    if not (x == 1 and y == 1):  # Skip the center cell
-                        tribe = neighbors_window[x, y]
-                        if tribe > 0:  # If it's a living cell
-                            unique_tribes[tribe] = unique_tribes.get(tribe, 0) + 1
-            
-            # Apply Game of Life rules with tribal dynamics
-            if board[i, j] > 0:  # If cell is alive
-                if living_neighbors < 2 or living_neighbors > 3:
-                    new_board[i, j] = 0  # Cell dies
-            else:  # If cell is dead
-                if living_neighbors == 3:
-                    # Cell is born - determine which tribe based on neighbors
-                    if unique_tribes:  # If there are living neighbors
-                        # Find the dominant tribe (tribe with most neighbors)
-                        dominant_tribe = max(unique_tribes.items(), key=lambda x: x[1])[0]
-                        new_board[i, j] = dominant_tribe
+    if tribal_mode:
+        # Tribal mode logic
+        for i in range(1, board.shape[0]-1):
+            for j in range(1, board.shape[1]-1):
+                # Get the neighborhood window
+                neighbors_window = board[i-1:i+2, j-1:j+2].copy()
+                # Count living neighbors (cells with non-zero values)
+                living_neighbors = np.sum(neighbors_window > 0) - (board[i, j] > 0)
+                
+                # Get counts of each tribe in the neighborhood
+                unique_tribes = {}
+                for x in range(3):
+                    for y in range(3):
+                        if not (x == 1 and y == 1):  # Skip the center cell
+                            tribe = neighbors_window[x, y]
+                            if tribe > 0:  # If it's a living cell
+                                unique_tribes[tribe] = unique_tribes.get(tribe, 0) + 1
+                
+                # Apply Game of Life rules with tribal dynamics
+                if board[i, j] > 0:  # If cell is alive
+                    if living_neighbors < 2 or living_neighbors > 3:
+                        new_board[i, j] = 0  # Cell dies
+                else:  # If cell is dead
+                    if living_neighbors == 3:
+                        # Cell is born - determine which tribe based on neighbors
+                        if unique_tribes:  # If there are living neighbors
+                            # Find the dominant tribe (tribe with most neighbors)
+                            dominant_tribe = max(unique_tribes.items(), key=lambda x: x[1])[0]
+                            new_board[i, j] = dominant_tribe
+    else:
+        # Standard Game of Life logic
+        for i in range(1, board.shape[0]-1):
+            for j in range(1, board.shape[1]-1):
+                # Count the number of live neighbors (any non-zero value is alive)
+                neighbors = np.sum(board[i-1:i+2, j-1:j+2] > 0) - (board[i, j] > 0)
+                # Apply the rules of the Game of Life
+                if board[i, j] > 0:
+                    if neighbors < 2 or neighbors > 3:
+                        new_board[i, j] = 0
+                else:
+                    if neighbors == 3:
+                        # In standard mode, all new cells will be tribe 1
+                        new_board[i, j] = 1
     
     return new_board
 
@@ -90,7 +106,7 @@ def draw_board(screen, board, previous_board):
                 pygame.display.update(rect)
     previous_board[:] = board
 
-def draw_buttons(screen, running, draw, current_tribe) :
+def draw_buttons(screen, running, draw, current_tribe, tribal_mode=True) :
     """ Render the Draw/Erase, Reset and Start/Pause buttons on the screen
     """
     # Set up font for button text
@@ -107,6 +123,10 @@ def draw_buttons(screen, running, draw, current_tribe) :
     # Create the tribe selection button
     tribe_button = pygame.Rect((WIDTH - BUTTON_WIDTH)//2, HEIGHT - 4*BUTTON_HEIGHT-30,\
                                 BUTTON_WIDTH, BUTTON_HEIGHT)
+                                
+    # Create the mode toggle button
+    mode_button = pygame.Rect((WIDTH - BUTTON_WIDTH)//2, HEIGHT - 5*BUTTON_HEIGHT-40,\
+                                BUTTON_WIDTH, BUTTON_HEIGHT)
 
     blank_text = font.render("********", True, DEAD_COLOR, (0,0,0,0))
 
@@ -115,6 +135,7 @@ def draw_buttons(screen, running, draw, current_tribe) :
         draw_text = blank_text
         reset_text = blank_text
         tribe_text = blank_text
+        mode_text = blank_text
         color = (0, 0, 0)
     else:
         if draw:
@@ -126,6 +147,7 @@ def draw_buttons(screen, running, draw, current_tribe) :
         reset_text = font.render("Reset", True, (255,255,255), (0,0,0,0))
         draw_text = font.render(draw_title, True, (255,255,255), (0,0,0,0))
         tribe_text = font.render(f"Tribe: {current_tribe}", True, (255,255,255), (0,0,0,0))
+        mode_text = font.render(f"Mode: {'Tribal' if tribal_mode else 'Standard'}", True, (255,255,255), (0,0,0,0))
         color = (255, 0, 0)
 
     screen.blit(reset_text, (reset_button.x + (reset_button.width - reset_text.get_width()) \
@@ -141,6 +163,11 @@ def draw_buttons(screen, running, draw, current_tribe) :
                 // 2, tribe_button.y + (tribe_button.height - tribe_text.get_height()) // 2))
     # Draw a colored border using the tribe's color
     pygame.draw.rect(screen, TRIBE_COLORS[current_tribe], tribe_button, 2)
+    
+    # Draw the mode toggle button
+    screen.blit(mode_text, (mode_button.x + (mode_button.width - mode_text.get_width()) \
+                // 2, mode_button.y + (mode_button.height - mode_text.get_height()) // 2))
+    pygame.draw.rect(screen, color, mode_button, 2)
 
     # Create the start/pause game button -- this is button is always visible
     start_game_button = pygame.Rect((WIDTH - BUTTON_WIDTH)//2, HEIGHT - BUTTON_HEIGHT, \
@@ -154,7 +181,7 @@ def draw_buttons(screen, running, draw, current_tribe) :
                 start_game_text.get_height()) // 2))
     pygame.draw.rect(screen, (255, 0, 0), start_game_button, 2)
 
-    return start_game_button, reset_button, draw_button, tribe_button
+    return start_game_button, reset_button, draw_button, tribe_button, mode_button
 
 def main():
     """ Main function"""
@@ -170,6 +197,7 @@ def main():
     draw = True
     running = False
     current_tribe = 1  # Default tribe for drawing
+    tribal_mode = True  # Default to tribal mode
 
     # Set window size and title
     game_screen_size = (800, 800)
@@ -178,7 +206,8 @@ def main():
 
     while True:
         previous_board = np.copy(game_board)
-        start_game_button, reset_button, draw_button, tribe_button = draw_buttons(game_screen, running, draw, current_tribe)
+        start_game_button, reset_button, draw_button, tribe_button, mode_button = draw_buttons(
+            game_screen, running, draw, current_tribe, tribal_mode)
 
         # Check for mouse events
         for event in pygame.event.get():
@@ -201,13 +230,16 @@ def main():
                     elif tribe_button.collidepoint(event.pos):
                         # Cycle through tribes
                         current_tribe = (current_tribe % MAX_TRIBES) + 1
+                    elif mode_button.collidepoint(event.pos):
+                        # Toggle between standard and tribal mode
+                        tribal_mode = not tribal_mode
                     else:
                         mouse_down = True
             elif event.type == pygame.MOUSEBUTTONUP:
                 mouse_down = False
         if running:
-            # Update the board
-            game_board = game_of_life(game_board)
+            # Update the board with tribal dynamics
+            game_board = game_of_life(game_board, tribal_mode)
         if mouse_down:
             # draw/erase a cell
             mouse_x, mouse_y = pygame.mouse.get_pos()
