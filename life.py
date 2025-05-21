@@ -7,6 +7,13 @@ import pygame
 import numpy as np
 import random
 
+# Detect if running in browser (via Pygbag/Pyodide)
+try:
+    import platform
+    IN_BROWSER = platform.system() == 'Emscripten'
+except:
+    IN_BROWSER = False
+
 # iPhone 15 Pro has aspect ratio of 2.16:1 in portrait mode
 WIDTH = 600  # Width of the screen in pixels
 HEIGHT = 1296  # Height of the screen in pixels (600 * 2.16)
@@ -31,8 +38,9 @@ NUM_TRIBES = len(TRIBE_COLORS) - 1
 # Cell size in pixels
 CELL_SIZE = 10
 
-# Current selected tribe (default to tribe 1)
-CURRENT_TRIBE = 1
+# Board position offset for centering (from main branch)
+BOARD_X_OFFSET = (WIDTH - 60 * CELL_SIZE) // 2  # Adjusted for our board width
+BOARD_Y_OFFSET = 50  # Provide some space at the top
 
 
 def game_of_life(board):
@@ -96,7 +104,7 @@ def draw_board(screen, board, previous_board):
                 tribe = board[board_x, board_y]
                 color = TRIBE_COLORS[tribe]
                 
-                rect = (board_x * CELL_SIZE, board_y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+                rect = (BOARD_X_OFFSET + board_x * CELL_SIZE, BOARD_Y_OFFSET + board_y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
                 pygame.draw.rect(screen, color, rect)
                 pygame.display.update(rect)
     
@@ -107,19 +115,22 @@ def draw_buttons(screen, running, draw, current_tribe):
     """
     # Set up font for button text
     font = pygame.font.Font(None, 30)
+    
+    # Position buttons in the bottom area of the screen
+    buttons_y_start = BOARD_Y_OFFSET + board_height * CELL_SIZE + 40  # Start button positioning below the board with some padding
 
     # Create the draw button -- this is only visible when the game is not running
-    draw_button = pygame.Rect((WIDTH - BUTTON_WIDTH)//2, HEIGHT - 5*BUTTON_HEIGHT-40,\
+    draw_button = pygame.Rect((WIDTH - BUTTON_WIDTH)//2, buttons_y_start,
                               BUTTON_WIDTH, BUTTON_HEIGHT)
 
     # Create the reset button -- this is only visible when the game is not running
-    reset_button = pygame.Rect((WIDTH - BUTTON_WIDTH)//2, HEIGHT - 4*BUTTON_HEIGHT-30,\
+    reset_button = pygame.Rect((WIDTH - BUTTON_WIDTH)//2, buttons_y_start + BUTTON_HEIGHT + 10,
                                BUTTON_WIDTH, BUTTON_HEIGHT)
     
     # Create tribe selection buttons (one for each tribe)
     tribe_buttons = []
     for i in range(1, NUM_TRIBES + 1):
-        tribe_button = pygame.Rect((WIDTH - BUTTON_WIDTH)//2, HEIGHT - (4-i)*BUTTON_HEIGHT-20,\
+        tribe_button = pygame.Rect((WIDTH - BUTTON_WIDTH)//2, buttons_y_start + (i+1) * (BUTTON_HEIGHT + 10),
                                   BUTTON_WIDTH, BUTTON_HEIGHT)
         tribe_buttons.append(tribe_button)
 
@@ -174,7 +185,8 @@ def draw_buttons(screen, running, draw, current_tribe):
         pygame.draw.rect(screen, button_outline_color, tribe_button, thickness)
 
     # Create the start/pause game button -- this button is always visible
-    start_game_button = pygame.Rect((WIDTH - BUTTON_WIDTH)//2, HEIGHT - BUTTON_HEIGHT - 10, \
+    # Position it at the bottom of all the tribe buttons
+    start_game_button = pygame.Rect((WIDTH - BUTTON_WIDTH)//2, buttons_y_start + (NUM_TRIBES + 2) * (BUTTON_HEIGHT + 10), \
                             BUTTON_WIDTH, BUTTON_HEIGHT)
 
     start_game_text = font.render(game_button_name, True, (255,255,255), (0,0,0,0))
@@ -189,6 +201,7 @@ def draw_buttons(screen, running, draw, current_tribe):
 
 def main():
     """ Main function"""
+    global board_width, board_height
 
     # Initialize pygame
     pygame.init()
@@ -208,18 +221,60 @@ def main():
     # Set window size and title
     game_screen_size = (WIDTH, HEIGHT)
     game_screen = pygame.display.set_mode(game_screen_size)
-    pygame.display.set_caption("Game of Life - Tribal Edition")
+    pygame.display.set_caption("Game of Life - Tribal Edition for iPhone 15 Pro")
+
+    # Handle touch events for mobile devices (from main branch)
+    has_touchscreen = pygame.display.get_active() and hasattr(pygame, 'FINGERDOWN')
 
     while True:
         previous_board = np.copy(game_board)
         start_game_button, reset_button, draw_button, tribe_buttons = draw_buttons(
             game_screen, running, draw, current_tribe)
 
-        # Check for mouse events
+        # Check for mouse/touch events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+                
+            # Handle touch events for mobile (from main branch)
+            elif has_touchscreen and event.type == pygame.FINGERDOWN:
+                # Convert touch coordinates to screen coordinates
+                x = event.x * WIDTH
+                y = event.y * HEIGHT
+                pos = (x, y)
+                
+                if running:
+                    if start_game_button.collidepoint(pos):
+                        running = not running
+                else:
+                    if start_game_button.collidepoint(pos):
+                        running = not running
+                    elif reset_button.collidepoint(pos):
+                        # reset the board to blank
+                        game_board = np.zeros((board_width, board_height), dtype=int)
+                    elif draw_button.collidepoint(pos):
+                        draw = not draw
+                    else:
+                        # Check if a tribe button was clicked
+                        tribe_selected = False
+                        for i, tribe_button in enumerate(tribe_buttons):
+                            if tribe_button.collidepoint(pos):
+                                current_tribe = i + 1
+                                tribe_selected = True
+                                break
+                        
+                        # If no tribe was selected, place a cell at touch position
+                        if not tribe_selected:
+                            board_x = int((x - BOARD_X_OFFSET) // CELL_SIZE)
+                            board_y = int((y - BOARD_Y_OFFSET) // CELL_SIZE)
+                            if 0 <= board_x < game_board.shape[0] and 0 <= board_y < game_board.shape[1]:
+                                if draw:
+                                    game_board[board_x, board_y] = current_tribe
+                                else:
+                                    game_board[board_x, board_y] = 0
+            
+            # Regular mouse events
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if running:
                     if start_game_button.collidepoint(event.pos):
@@ -250,7 +305,8 @@ def main():
         if mouse_down:
             # draw/erase a cell
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            board_x, board_y = mouse_x // CELL_SIZE, mouse_y // CELL_SIZE
+            board_x = (mouse_x - BOARD_X_OFFSET) // CELL_SIZE
+            board_y = (mouse_y - BOARD_Y_OFFSET) // CELL_SIZE
             if 0 <= board_x < game_board.shape[0] and 0 <= board_y < game_board.shape[1]:
                 if draw:
                     # Draw with the current tribe
