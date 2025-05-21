@@ -7,8 +7,8 @@ import pygame
 import numpy as np
 
 
-WIDTH = 800  # Width of the screen in pixels
-HEIGHT = 600  # Height of the screen in pixels
+WIDTH = 600  # Width of the screen in pixels
+HEIGHT = 1296  # Height of the screen in pixels (iPhone 15 Pro portrait ratio ~2.16:1)
 BUTTON_WIDTH = 150  # Width of the button in pixels
 BUTTON_HEIGHT = 50  # Height of the button in pixels
 
@@ -125,9 +125,9 @@ def main():
     running = False
 
     # Set window size and title
-    game_screen_size = (800, 800)
+    game_screen_size = (WIDTH, HEIGHT)
     game_screen = pygame.display.set_mode(game_screen_size)
-    pygame.display.set_caption("Game of Life")
+    pygame.display.set_caption("Game of Life - iPhone 15 Pro")
 
     while True:
         previous_board = np.copy(game_board)
