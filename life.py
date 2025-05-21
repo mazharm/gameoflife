@@ -18,7 +18,11 @@ DEAD_COLOR = (0, 0, 0)
 TRANSPARENT_COLOR = (0, 0, 0)
 
 # Cell size in pixels
-CELL_SIZE = 10
+CELL_SIZE = 7
+
+# Board position offset for centering
+BOARD_X_OFFSET = (WIDTH - 80 * CELL_SIZE) // 2
+BOARD_Y_OFFSET = 50  # Provide some space at the top
 
 
 def game_of_life(board):
@@ -51,7 +55,7 @@ def draw_board(screen, board, previous_board):
                     color = ALIVE_COLOR
                 else:
                     color = DEAD_COLOR
-                rect = (board_x * CELL_SIZE, board_y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+                rect = (BOARD_X_OFFSET + board_x * CELL_SIZE, BOARD_Y_OFFSET + board_y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
                 pygame.draw.rect(screen, color, rect)
                 pygame.display.update(rect)
     previous_board[:] = board
@@ -161,8 +165,9 @@ def main():
         if mouse_down:
             # draw/erase a cell
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            board_x, board_y = mouse_x // CELL_SIZE, mouse_y // CELL_SIZE
-            if board_x < game_board.shape[0] and board_y < game_board.shape[1]:
+            board_x = (mouse_x - BOARD_X_OFFSET) // CELL_SIZE
+            board_y = (mouse_y - BOARD_Y_OFFSET) // CELL_SIZE
+            if 0 <= board_x < game_board.shape[0] and 0 <= board_y < game_board.shape[1]:
                 game_board[board_x, board_y] = draw
 
         # Draw the board
